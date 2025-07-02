@@ -81,8 +81,60 @@ const displayCart = () => {
     modalFooter.className = "modal-footer";
     modalFooter.innerHTML = `
     <div class="total-price">Total: $${total}</div>
+    <button class="btn-primary" id="checkout-btn">go to checkout</button>
+    <div id="wallet_container"></div>
     `;
     modalContainer.append(modalFooter);
+
+    //mp 
+    //entre comillas pasar la public key creada desde la pagina de mercado pago
+    const mp = new MercadoPago("APP_USER...", {
+        locale: "es-AR",
+    });
+
+    //funcion que genera un titulo con la info del carrito: 25' 50''
+    const generateCrtDescription = () => {
+        return cart.map(product => `${product.productName} (x${product.quanty})`).join(', ');
+    }; 
+
+    document.getElementById("checkout-btn").addEventListener("click", async()=> {
+        try{
+            const orderData = {
+                title: generateCrtDescription(),
+                quantity: 1,
+                price: total,
+            }; 
+
+            const response = await fetch("http://localhost:3000/create_preference", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                }, 
+                body: JSON.stringify(orderData),
+            }); 
+
+            const preference =  await response.json(); //esoera respuesta del back
+            createCheckoutButton(preference.id);
+        } catch(error){
+            alert("error :(");
+        }
+    });
+
+    const createCheckoutButton = (preferenceId) => {
+        const bricksBuilder = mp.bricks();
+
+        const renderComponent = async () => {
+            if(window.checkoutButton) window.checkoutButton.unmount();
+
+            await bricksBuilder.create("wallet", "wallet_container", {
+                initialization: {
+                    preferenceId: preferenceId,
+                },
+            });
+        };
+        renderComponent();  
+    }
+
 } else {
     const modalText = document.createElement('h2');
     modalText.className = "modal-body";
